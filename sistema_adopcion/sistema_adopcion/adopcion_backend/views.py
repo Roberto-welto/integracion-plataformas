@@ -25,13 +25,12 @@ class LinksPageView(TemplateView):
 class Pets(TemplateView):
     def getPet(request):
         name='liran'
-        return HttpResponse('{" name";}"' + name + '", "age":31, "city":"New York" }')
+        return HttpResponse('{" name": "'+ name + '", "age":3, "city":"New York" }')
 
 @api_view(["POST"])
-def CalcTest(x1):
+def PostPet(Pet):
     try:
-        x=json.loads(x1.body)
-        y=str(x*100)
-        return JsonResponse("Result:"+y, safe=False)
+        pet=json.loads(Pet.body)
+        return JsonResponse(pet, safe=False)
     except ValueError as e:
         return Response(e.args[0],status.HTTP_400_BAD_REQUEST)

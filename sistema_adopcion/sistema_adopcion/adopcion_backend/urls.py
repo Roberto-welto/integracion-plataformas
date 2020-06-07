@@ -10,6 +10,6 @@ router.register(r'pets', views.Pets, basename="Pets")
 urlpatterns = [
     url(r'^$', views.HomePageView.as_view()),
     url(r'^links/$', views.LinksPageView.as_view()),
-    url(r'^getpet/$', views.Pets.getPet),
-    url(r'^apitest/$', views.CalcTest)
+    url(r'getpet/$', views.Pets.getPet),
+    url(r'apitest/$', views.PostPet)
 ]
