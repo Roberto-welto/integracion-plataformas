@@ -1,0 +1,20 @@
+<div>
+  <mat-card *ngFor="let pet of pets">
+    <mat-card-header>
+      <mat-card-title>
+        Nombre:{{pet.name}}
+        Raza: {{pet.race}}
+      </mat-card-title>
+      <img mat-card-image [src]="pet.urlImg">
+    </mat-card-header>
+    <mat-card-content>
+      <p>Descripcion: {{pet.description}}</p>
+      <p>Edad: {{pet.age}}</p>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <button mat-button>Adoptar</button>
+    </mat-card-actions>
+  </mat-card>
+</div>
+<h1>help</h1>
