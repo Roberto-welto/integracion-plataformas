@@ -84,9 +84,9 @@ WSGI_APPLICATION = 'sistema_adopcion.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'adopcion',
-        'USER': 'postgres',
-        'PASSWORD': '1234',
+        'NAME': 'sistema_adopcion',
+        'USER': 'rob',
+        'PASSWORD': '1303',
         'HOST': 'localhost',
         'PORT': ''
     }
