@@ -21,7 +21,7 @@ class Pet(models.Model):
     description = models.CharField(max_length = 200)
     age = models.CharField(max_length = 30, null=True)
     urlImg = models.CharField(max_length = 100)
-    user = models.ForeignKey(User, on_delete = models.CASCADE)
+    # user_id = models.ForeignKey(User, on_delete = models.CASCADE)
 
 
 # class Adoption(models.Model):

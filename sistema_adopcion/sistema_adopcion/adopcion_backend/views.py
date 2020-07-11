@@ -1,7 +1,10 @@
+import psycopg2
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.generic import TemplateView
-
+from io import BytesIO
+import json
+import boto3
 # Create your views here.
 
 from rest_framework import status
@@ -12,9 +15,9 @@ from rest_framework.parsers import JSONParser
 from rest_framework import serializers
 from rest_framework import viewsets
 
-
 from .serializers import UserSerializer, PetSerializer
 from .models import Pet, User
+
 
 class HomePageView(TemplateView):
     def get(self, request, **kwargs):
@@ -33,22 +36,152 @@ class Pets(TemplateView):
 
 
 # Example method
-@api_view(["POST"])
-def PostPet(Pet):
-    try:
-<<<<<<< HEAD
-        pet=json.loads(Pet.body)
-        return JsonResponse(pet, safe=False)
-=======
-        x=json.loads(x1.body)
-        # print(x["data"], 'Value of x')                                                                                  
-        y=str(x * 100)
-        return JsonResponse("Result:"+y, safe=False)
->>>>>>> 92df1d71bfb1c776c19a0d92e30ba1ea3623039a
-    except ValueError as e:
-        return Response(e.args[0],status.HTTP_400_BAD_REQUEST)
+@api_view(["GET", "POST", "PUT"])
+def get_petbd(req):
+  try:
+
+    if req.method == 'GET':  
+      connection = psycopg2.connect(
+        user='postgres',
+        password="1303",
+        host="localhost",
+        port="5432",
+        database = "sistema_adopcion")
+
+      cursor = connection.cursor()
+
+      cursor.execute(f"SELECT * FROM sistema_adopcion.f_obtener_mascotas(next_set := CAST ({50} AS INTEGER), off  := CAST ({0} AS INTEGER), sort := CAST('{'DESC'}' AS VARCHAR));")
+
+      mascotaGet = cursor.fetchone()
+      mascotaGet = mascotaGet[0]
+
+      return Response(mascotaGet)
+
+    elif req.method == 'POST':
+      mascota = json.loads(req.body)
+      print(mascota)
+      connection = psycopg2.connect(
+        user='postgres',
+        password="1303",
+        host="localhost",
+        port="5432",
+        database = "sistema_adopcion")
+
+      cursor = connection.cursor()
+
+      cursor.execute(f"""INSERT INTO sistema_adopcion.mascota(nombre, tipo_mascota_id, descripcion, edad, usuario_id, fecha_creacion) 
+                       VALUES('{mascota['nombre']}', {mascota['tipo_mascota_id']}, '{mascota['descripcion']}', {mascota['edad']}, {1}, CURRENT_TIMESTAMP)
+                       RETURNING id;""")
+  
+  
+      mascotaId = cursor.fetchone()
+
+      mascotaId = mascotaId[0]
+
+      connection.commit()
+
+      cursor.execute(f"SELECT * FROM sistema_adopcion.f_obtener_mascota_por_id({mascotaId})")
+
+      mascotaInserted = cursor.fetchone()
+
+      mascotaInserted = mascotaInserted[0]
+
+      return Response(mascotaInserted)
+    
+    elif req.method == 'PUT':
+
+      mascota = json.loads(req.body)
+      print(mascota)
+      connection = psycopg2.connect(
+        user='postgres',
+        password="1303",
+        host="localhost",
+        port="5432",
+        database = "sistema_adopcion")
+
+      cursor = connection.cursor()
+
+      if req.query_params.get('img') != "" :
+
+        query_update = f"""INSERT INTO sistema_adopcion.mascotas_img (nombre_archivo, mascota_id, ruta_s3) 
+                        VALUES ('{mascota['documento']['name']}', {mascota['id']}, '{mascota['documento']['ruta_s3']}') RETURNING id;"""
+        
+        print(query_update)
+
+        cursor.execute(query_update)
+
+        mascotaImg = cursor.fetchone()
+
+        print(mascotaImg)
+
+        connection.commit()
+
+        cursor.execute(f"""SELECT * FROM sistema_adopcion.f_obtener_mascota_por_id({mascota['id']})""")
+
+        mascota = cursor.fetchone()
+
+        mascota = mascota[0]
+
+        return Response(mascota)
+
+  except Exception as e:
+
+    print(str(e))
+
+@api_view(['GET'])
+def get_tipo_mascota(req):
+
+  if req.method == 'GET':
+
+    connection = psycopg2.connect(
+        user='postgres',
+        password="1303",
+        host="localhost",
+        port="5432",
+        database = "sistema_adopcion")
+
+    cursor = connection.cursor()
+
+    cursor.execute(f"""SELECT * FROM sistema_adopcion.f_obtener_tipo_mascotas(next_set := CAST ({50} AS INTEGER), off  := CAST ({0} AS INTEGER), sort := CAST('{'DESC'}' AS VARCHAR));""")
+
+    tipo_mascota = cursor.fetchone()[0]
+
+    return Response(tipo_mascota)
 
 
+@api_view(["PUT"])
+def get_doc(req):
+  try:
+
+    if req.method == 'PUT':
+        mascota = json.loads(req.body)
+        mascota = mascota
+        print(mascota)
+        region_name = 'us-east-1'
+
+        session = boto3.session.Session()
+        client = session.client(
+          service_name='s3',
+          region_name=region_name
+        )
+
+        try:
+
+          print(mascota['documento'])
+          response = client.generate_presigned_post('sistema.adopcion', mascota['documento'].get('objKey'),
+                                                    Fields=None,
+                                                    Conditions=None,
+                                                    ExpiresIn=3600)
+
+          print(response)
+
+          return Response(response)
+        except Exception as e:
+
+          raise Exception(str(e))
+  
+  except Exception as e:
+    print(str(e))
 
 @api_view(['GET', 'POST'])
 def user_list(req):
@@ -100,6 +233,7 @@ def pet_list(req):
     if req.method == 'POST':
         data = JSONParser().parse(req)
         serializer = PetSerializer(data=data)
+        print(serializer)
         if serializer.is_valid():
             serializer.save()
             return JsonResponse(serializer.data)
