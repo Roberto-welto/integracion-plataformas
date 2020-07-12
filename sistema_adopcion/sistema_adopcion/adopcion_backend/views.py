@@ -418,6 +418,8 @@ def donate(req):
 
       metadata={'integration_check': 'accept_a_payment'}
     )
+
+    
     transaction = []
 
 
