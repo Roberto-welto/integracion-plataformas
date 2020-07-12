@@ -83,8 +83,12 @@ WSGI_APPLICATION = 'sistema_adopcion.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'sistema_adopcion',
+        'USER': 'rob',
+        'PASSWORD': '1303',
+        'HOST': 'localhost',
+        'PORT': ''
     }
 }
 
