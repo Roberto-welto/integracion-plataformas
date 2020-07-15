@@ -3,6 +3,11 @@
 --drop table sistema_adopcion.users;
 --drop table sistema_adopcion.tipo_usuario;
 
+--drop table sistema_adopcion.donacion;
+--drop table sistema_adopcion.mascota;
+--drop table sistema_adopcion.users;
+--drop table sistema_adopcion.tipo_usuario;
+
 create table sistema_adopcion.comuna (
 id serial primary key,
 nombre_comuna varchar(100) not null,
@@ -24,36 +29,37 @@ fecha_creacion timestamp,
 fecha_borrado timestamp
 )
 
-create table sistema_adopcion.usuarios (
-id serial primary key,
-rut varchar (24) not null unique,
-nombre varchar(100) not null,
-email varchar(60) not null,
-direccion varchar(100) not null,
-comuna_id int4 not null,
-tipo_usuario_id int4 not null,
+CREATE TABLE sistema_adopcion.usuarios (
+id serial PRIMARY KEY,
+rut varchar (24) NOT NULL UNIQUE,
+nombre varchar(100) NOT NULL
+email varchar(60) NOT NULL,
+direccion varchar(100) NOT NULL,
+comuna_id int4 NOT NULL,
+tipo_usuario_id int4 NOT NULL,
 fecha_creacion timestamp,
 fecha_borrado timestamp,
-pass varchar(300) not null,
-constraint tipo_usuario_id_fkey foreign key (tipo_usuario_id)
-references sistema_adopcion.tipo_usuario (id) match simple,
-constraint comuna_id_fkey foreign key (comuna_id)
-references sistema_adopcion.comuna (id) match simple
+pass varchar(300) NOT NULL,
+telefono varchar(13) NOT NULL,
+CONSTRAINT tipo_usuario_id_fkey FOREIGN KEY (tipo_usuario_id)
+REFERENCES sistema_adopcion.tipo_usuario (id) MATCH SIMPLE ,
+CONSTRAINT comuna_id_fkey FOREIGN KEY (comuna_id)
+REFERENCES sistema_adopcion.comuna (id) MATCH SIMPLE 
 )
 
-create table sistema_adopcion.mascota (
-id serial primary key,
-nombre varchar(60) not null,
-tipo_mascota_id int4 not null,
+CREATE TABLE sistema_adopcion.mascota (
+id serial PRIMARY KEY,
+nombre varchar(60) NOT NULL,
+tipo_mascota_id int4 NOT NULL,
 descripcion text,
 edad int4,
-usuario_id int4 not null,
+usuario_id int4 NOT NULL,
 fecha_creacion timestamp,
 fecha_borrado timestamp,
-constraint tipo_mascota_id_fkey foreign key (tipo_mascota_id)
-	references sistema_adopcion.tipo_mascota (id) match simple,
-constraint usuario_id_fkey foreign key (usuario_id)
-	references sistema_adopcion.usuarios (id) match simple
+CONSTRAINT tipo_mascota_id_fkey FOREIGN KEY (tipo_mascota_id)
+	REFERENCES sistema_adopcion.tipo_mascota (id) MATCH SIMPLE,
+CONSTRAINT usuario_id_fkey FOREIGN KEY (usuario_id)
+	REFERENCES sistema_adopcion.usuarios (id) MATCH SIMPLE
 )
 
 CREATE TABLE sistema_adopcion.mascotas_img (
@@ -64,13 +70,13 @@ ruta_s3 varchar(500),
 CONSTRAINT img_mascota_fkey FOREIGN KEY (mascota_id)
 	REFERENCES sistema_adopcion.mascota (id)
 )
-create table sistema_adopcion.donacion (
-id serial primary key,
-monto int4 not null,
+CREATE TABLE sistema_adopcion.donacion (
+id serial PRIMARY KEY,
+monto int4 NOT NULL,
 fecha_donacion timestamp,
-usuario_id int4 not null,
-constraint usiaro_id_donacion_fkey foreign key (usuario_id)
-	references sistema_adopcion.usuarios (id) match simple
+usuario_id int4 NOT NULL,
+CONSTRAINT usiaro_id_donacion_fkey FOREIGN KEY (usuario_id)
+	REFERENCES sistema_adopcion.usuarios (id) MATCH
 )
 
 insert into 
@@ -468,10 +474,10 @@ null,
 )
 
 
-CREATE OR REPLACE FUNCTION sistema_adopcion.f_obtener_mascotas(next_set INTEGER, off integer, sort CHARACTER VARYING)
- RETURNS JSON
- LANGUAGE PLPGSQL
-AS $FUNCTION$
+CREATE OR REPLACE FUNCTION sistema_adopcion.f_obtener_mascotas(next_set integer, off integer, sort character varying)
+ RETURNS json
+ LANGUAGE plpgsql
+AS $function$
 
 DECLARE
 
@@ -481,12 +487,20 @@ BEGIN
 	
 	
 	EXECUTE
-	 'SELECT ARRAY_TO_JSON(ARRAY_AGG(ROW_TO_JSON(tal)))
+	 'SELECT ARRAY_TO_JSON(ARRAY_AGG(ROW_TO_JSON(mascota)))
 		FROM (
-			 SELECT * FROM sistema_adopcion.mascota
-				WHERE fecha_borrado IS NULL
-				ORDER BY fecha_creacion DESC
-				OFFSET ' || off || ' ) tal'
+			 SELECT m.nombre, tm.nombre_tipo_mascota as tipo_mascota,
+				m.descripcion, m.edad, 
+				m.fecha_creacion,
+				(SELECT array_to_json(array_agg(row_to_json(img))) 
+					FROM (SELECT * FROM sistema_adopcion.mascotas_img
+							WHERE mascota_id = m.id ) img) AS imagenes
+				FROM sistema_adopcion.mascota m
+				JOIN sistema_adopcion.tipo_mascota tm
+				ON (m.tipo_mascota_id = tm.id)
+				WHERE m.fecha_borrado IS NULL
+				ORDER BY m.fecha_creacion DESC
+				OFFSET ' || off || ' ) mascota'
 				
 	INTO ov_mascotas;
 
@@ -499,14 +513,13 @@ EXCEPTION
 	
 END;
 
-$FUNCTION$
-
+$function$
 ;
 
-CREATE OR REPLACE FUNCTION sistema_adopcion.f_obtener_mascota_por_id(id_mascota INTEGER)
- RETURNS JSON
- LANGUAGE PLPGSQL
-AS $FUNCTION$
+CREATE OR REPLACE FUNCTION sistema_adopcion.f_obtener_mascota_por_id(id_mascota integer)
+ RETURNS json
+ LANGUAGE plpgsql
+AS $function$
 
 DECLARE 
 
@@ -539,7 +552,7 @@ EXCEPTION
 	  
 	
 END;
-$FUNCTION$
+$function$
 ;
 
 
@@ -580,3 +593,103 @@ EXCEPTION
 END;
 $FUNCTION$
 ;
+
+CREATE OR REPLACE FUNCTION sistema_adopcion.f_obtener_tipo_mascotas(next_set integer, off integer, sort character varying)
+ RETURNS json
+ LANGUAGE plpgsql
+AS $function$
+
+DECLARE
+
+ov_tipo_mascota JSON;
+
+BEGIN
+	
+	EXECUTE
+	 'SELECT ARRAY_TO_JSON(ARRAY_AGG(ROW_TO_JSON(tal)))
+		FROM (
+			 SELECT * FROM sistema_adopcion.tipo_mascota
+				WHERE fecha_borrado IS NULL
+				ORDER BY fecha_creacion DESC
+				OFFSET ' || off || ' ) tal'
+				INTO ov_tipo_mascota;
+			
+	RETURN ov_tipo_mascota;
+
+EXCEPTION
+	WHEN OTHERS THEN
+		RAISE EXCEPTION 'Error obteniendo los tipos de mascota del sistema - ERROR: % | STATE: %', SQLERRM, SQLSTATE;
+END;
+$function$
+;
+
+
+CREATE OR REPLACE FUNCTION sistema_adopcion.f_obtener_comunas(next_set integer, off integer, sort character varying)
+ RETURNS json
+ LANGUAGE plpgsql
+AS $function$
+
+DECLARE
+
+ov_comuna JSON;
+
+BEGIN
+	
+	EXECUTE
+	 'SELECT ARRAY_TO_JSON(ARRAY_AGG(ROW_TO_JSON(tal)))
+		FROM (
+			 SELECT * FROM sistema_adopcion.comuna
+				WHERE fecha_borrado IS NULL
+				ORDER BY id DESC) tal'
+				INTO ov_comuna;
+			
+	RETURN ov_comuna;
+
+EXCEPTION
+	WHEN OTHERS THEN
+		RAISE EXCEPTION 'Error obteniendo las comunas del sistema - ERROR: % | STATE: %', SQLERRM, SQLSTATE;
+END;
+$function$
+;
+
+
+
+CREATE OR REPLACE FUNCTION sistema_adopcion.f_obtener_usuario_por_id(id_usuario integer)
+ RETURNS json
+ LANGUAGE plpgsql
+AS $function$
+
+DECLARE 
+
+ ov_usuario JSON;
+
+BEGIN 
+	
+	SELECT ROW_TO_JSON(usuario)
+	 FROM (
+	 	SELECT
+	 	u.rut,
+	 	u.nombre,
+	 	u.email,
+	 	u.direccion,
+	 	u.comuna_id,
+	 	c.nombre_comuna AS comuna
+	 	FROM sistema_adopcion.usuarios u
+	 	JOIN sistema_adopcion.comuna c
+	 	ON u.comuna_id = c.id 
+	 	WHERE u.id = id_usuario
+	  ) usuario
+	  INTO ov_usuario;
+	 
+	 RETURN ov_usuario;
+	
+EXCEPTION
+	
+	WHEN OTHERS THEN
+		RAISE EXCEPTION 'Error obteniendo usuario - ERROR: % | STATE: % ', SQLERRM, SQLSTATE;
+	  
+	
+END;
+$function$
+;
+
