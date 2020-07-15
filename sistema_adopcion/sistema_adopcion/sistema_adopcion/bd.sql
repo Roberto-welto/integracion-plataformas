@@ -46,7 +46,7 @@ REFERENCES sistema_adopcion.tipo_usuario (id) MATCH SIMPLE ,
 CONSTRAINT comuna_id_fkey FOREIGN KEY (comuna_id)
 REFERENCES sistema_adopcion.comuna (id) MATCH SIMPLE 
 )
-
+ 
 CREATE TABLE sistema_adopcion.mascota (
 id serial PRIMARY KEY,
 nombre varchar(60) NOT NULL,
