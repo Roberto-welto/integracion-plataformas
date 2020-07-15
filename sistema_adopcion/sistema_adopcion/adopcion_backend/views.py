@@ -414,8 +414,7 @@ def donate(req):
 
     intent = stripe.PaymentIntent.create(
       amount=1099,
-      currency='clp'
-
+      currency='clp',
       metadata={'integration_check': 'accept_a_payment'}
     )
 
